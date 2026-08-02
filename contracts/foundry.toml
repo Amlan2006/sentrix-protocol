@@ -6,6 +6,6 @@ solc_version = "0.8.24"
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
 
 [rpc_endpoints]
-celo_sepolia = "${CELO_SEPOLIA_RPC_URL}"
+bsc_testnet = "${BSC_TESTNET_RPC_URL}"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

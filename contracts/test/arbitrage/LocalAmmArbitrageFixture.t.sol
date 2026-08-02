@@ -10,78 +10,78 @@ contract LocalAmmArbitrageFixtureTest is Test {
     address private trader = address(0xA11CE);
 
     MockERC20 private usdc;
-    MockERC20 private weth;
+    MockERC20 private wbnb;
     MockERC20 private wbtc;
     MockAmmAdapter private adapter;
 
     function setUp() public {
         usdc = new MockERC20("Mock USDC", "mUSDC", 6);
-        weth = new MockERC20("Mock WETH", "mWETH", 18);
+        wbnb = new MockERC20("Mock WBNB", "mWBNB", 18);
         wbtc = new MockERC20("Mock WBTC", "mWBTC", 8);
         adapter = new MockAmmAdapter();
 
         usdc.mint(trader, 1_000_000e6);
-        weth.mint(trader, 1_000e18);
+        wbnb.mint(trader, 1_000e18);
         wbtc.mint(trader, 100e8);
     }
 
     function test_twoPoolProfitableRouteProducesMoreSettlementToken() public {
-        MockConstantProductPool cheapWethPool = _seedPool(usdc, weth, 2_000_000e6, 1_000e18);
-        MockConstantProductPool expensiveWethPool = _seedPool(usdc, weth, 2_200_000e6, 1_000e18);
+        MockConstantProductPool cheapWbnbPool = _seedPool(usdc, wbnb, 2_000_000e6, 1_000e18);
+        MockConstantProductPool expensiveWbnbPool = _seedPool(usdc, wbnb, 2_200_000e6, 1_000e18);
 
-        adapter.registerPool(address(usdc), address(weth), address(cheapWethPool));
+        adapter.registerPool(address(usdc), address(wbnb), address(cheapWbnbPool));
 
         uint256 startingAmount = 10_000e6;
-        uint256 wethOut = _swap(usdc, weth, startingAmount, 1);
+        uint256 wbnbOut = _swap(usdc, wbnb, startingAmount, 1);
 
-        adapter.registerPool(address(usdc), address(weth), address(expensiveWethPool));
-        uint256 finalAmount = _swap(weth, usdc, wethOut, 1);
+        adapter.registerPool(address(usdc), address(wbnb), address(expensiveWbnbPool));
+        uint256 finalAmount = _swap(wbnb, usdc, wbnbOut, 1);
 
         assertGt(finalAmount, startingAmount);
     }
 
     function test_twoPoolNearBreakEvenRouteIsDeterministic() public {
-        MockConstantProductPool firstPool = _seedPool(usdc, weth, 2_000_000e6, 1_000e18);
-        MockConstantProductPool secondPool = _seedPool(usdc, weth, 2_032_060e6, 1_000e18);
+        MockConstantProductPool firstPool = _seedPool(usdc, wbnb, 2_000_000e6, 1_000e18);
+        MockConstantProductPool secondPool = _seedPool(usdc, wbnb, 2_032_060e6, 1_000e18);
 
-        adapter.registerPool(address(usdc), address(weth), address(firstPool));
+        adapter.registerPool(address(usdc), address(wbnb), address(firstPool));
 
         uint256 startingAmount = 10_000e6;
-        uint256 wethOut = _swap(usdc, weth, startingAmount, 1);
+        uint256 wbnbOut = _swap(usdc, wbnb, startingAmount, 1);
 
-        adapter.registerPool(address(usdc), address(weth), address(secondPool));
-        uint256 finalAmount = _swap(weth, usdc, wethOut, 1);
+        adapter.registerPool(address(usdc), address(wbnb), address(secondPool));
+        uint256 finalAmount = _swap(wbnb, usdc, wbnbOut, 1);
 
         assertApproxEqAbs(finalAmount, startingAmount, 1e6);
     }
 
     function test_twoPoolUnprofitableRouteProducesLessSettlementToken() public {
-        MockConstantProductPool firstPool = _seedPool(usdc, weth, 2_000_000e6, 1_000e18);
-        MockConstantProductPool secondPool = _seedPool(usdc, weth, 1_950_000e6, 1_000e18);
+        MockConstantProductPool firstPool = _seedPool(usdc, wbnb, 2_000_000e6, 1_000e18);
+        MockConstantProductPool secondPool = _seedPool(usdc, wbnb, 1_950_000e6, 1_000e18);
 
-        adapter.registerPool(address(usdc), address(weth), address(firstPool));
+        adapter.registerPool(address(usdc), address(wbnb), address(firstPool));
 
         uint256 startingAmount = 10_000e6;
-        uint256 wethOut = _swap(usdc, weth, startingAmount, 1);
+        uint256 wbnbOut = _swap(usdc, wbnb, startingAmount, 1);
 
-        adapter.registerPool(address(usdc), address(weth), address(secondPool));
-        uint256 finalAmount = _swap(weth, usdc, wethOut, 1);
+        adapter.registerPool(address(usdc), address(wbnb), address(secondPool));
+        uint256 finalAmount = _swap(wbnb, usdc, wbnbOut, 1);
 
         assertLt(finalAmount, startingAmount);
     }
 
     function test_triangularProfitableRouteProducesMoreSettlementToken() public {
-        MockConstantProductPool usdcWethPool = _seedPool(usdc, weth, 2_000_000e6, 1_000e18);
-        MockConstantProductPool wethWbtcPool = _seedPool(weth, wbtc, 1_000e18, 50e8);
+        MockConstantProductPool usdcWbnbPool = _seedPool(usdc, wbnb, 2_000_000e6, 1_000e18);
+        MockConstantProductPool wbnbWbtcPool = _seedPool(wbnb, wbtc, 1_000e18, 50e8);
         MockConstantProductPool wbtcUsdcPool = _seedPool(wbtc, usdc, 50e8, 2_200_000e6);
 
-        adapter.registerPool(address(usdc), address(weth), address(usdcWethPool));
-        adapter.registerPool(address(weth), address(wbtc), address(wethWbtcPool));
+        adapter.registerPool(address(usdc), address(wbnb), address(usdcWbnbPool));
+        adapter.registerPool(address(wbnb), address(wbtc), address(wbnbWbtcPool));
         adapter.registerPool(address(wbtc), address(usdc), address(wbtcUsdcPool));
 
         uint256 startingAmount = 10_000e6;
-        uint256 wethOut = _swap(usdc, weth, startingAmount, 1);
-        uint256 wbtcOut = _swap(weth, wbtc, wethOut, 1);
+        uint256 wbnbOut = _swap(usdc, wbnb, startingAmount, 1);
+        uint256 wbtcOut = _swap(wbnb, wbtc, wbnbOut, 1);
         uint256 finalAmount = _swap(wbtc, usdc, wbtcOut, 1);
 
         assertGt(finalAmount, startingAmount);
@@ -91,44 +91,44 @@ contract LocalAmmArbitrageFixtureTest is Test {
         vm.startPrank(trader);
         usdc.approve(address(adapter), 1e6);
         vm.expectRevert(MockAmmAdapter.PoolNotRegistered.selector);
-        adapter.swap(address(usdc), address(weth), 1e6, 1, "");
+        adapter.swap(address(usdc), address(wbnb), 1e6, 1, "");
         vm.stopPrank();
     }
 
     function test_wrongRouteDataPoolReverts() public {
-        MockConstantProductPool pool = _seedPool(usdc, weth, 2_000_000e6, 1_000e18);
-        MockConstantProductPool wrongPool = _seedPool(usdc, weth, 2_100_000e6, 1_000e18);
-        adapter.registerPool(address(usdc), address(weth), address(pool));
+        MockConstantProductPool pool = _seedPool(usdc, wbnb, 2_000_000e6, 1_000e18);
+        MockConstantProductPool wrongPool = _seedPool(usdc, wbnb, 2_100_000e6, 1_000e18);
+        adapter.registerPool(address(usdc), address(wbnb), address(pool));
 
         vm.startPrank(trader);
         usdc.approve(address(adapter), 1e6);
         vm.expectRevert(MockAmmAdapter.InvalidRouteData.selector);
-        adapter.swap(address(usdc), address(weth), 1e6, 1, abi.encode(address(wrongPool)));
+        adapter.swap(address(usdc), address(wbnb), 1e6, 1, abi.encode(address(wrongPool)));
         vm.stopPrank();
     }
 
     function test_zeroAmountInputReverts() public {
-        MockConstantProductPool pool = _seedPool(usdc, weth, 2_000_000e6, 1_000e18);
-        adapter.registerPool(address(usdc), address(weth), address(pool));
+        MockConstantProductPool pool = _seedPool(usdc, wbnb, 2_000_000e6, 1_000e18);
+        adapter.registerPool(address(usdc), address(wbnb), address(pool));
 
         vm.expectRevert(MockAmmAdapter.InvalidAmount.selector);
-        adapter.swap(address(usdc), address(weth), 0, 1, "");
+        adapter.swap(address(usdc), address(wbnb), 0, 1, "");
     }
 
     function test_slippageFailureReverts() public {
-        MockConstantProductPool pool = _seedPool(usdc, weth, 2_000_000e6, 1_000e18);
-        adapter.registerPool(address(usdc), address(weth), address(pool));
-        uint256 quote = adapter.quote(address(usdc), address(weth), 1_000e6);
+        MockConstantProductPool pool = _seedPool(usdc, wbnb, 2_000_000e6, 1_000e18);
+        adapter.registerPool(address(usdc), address(wbnb), address(pool));
+        uint256 quote = adapter.quote(address(usdc), address(wbnb), 1_000e6);
 
         vm.startPrank(trader);
         usdc.approve(address(adapter), 1_000e6);
         vm.expectRevert(abi.encodeWithSelector(MockConstantProductPool.SlippageExceeded.selector, quote, quote + 1));
-        adapter.swap(address(usdc), address(weth), 1_000e6, quote + 1, "");
+        adapter.swap(address(usdc), address(wbnb), 1_000e6, quote + 1, "");
         vm.stopPrank();
     }
 
     function test_wrongTokenPairReverts() public {
-        MockConstantProductPool pool = _seedPool(usdc, weth, 2_000_000e6, 1_000e18);
+        MockConstantProductPool pool = _seedPool(usdc, wbnb, 2_000_000e6, 1_000e18);
 
         vm.startPrank(trader);
         usdc.approve(address(pool), 1_000e6);

@@ -5,12 +5,12 @@ import {Script} from "forge-std/Script.sol";
 import {UserVaultFactory} from "../src/factory/UserVaultFactory.sol";
 
 contract DeployUserVaultFactory is Script {
-    uint256 internal constant CELO_SEPOLIA_CHAIN_ID = 11_142_220;
+    uint256 internal constant BSC_TESTNET_CHAIN_ID = 97;
 
     error UnsupportedChain(uint256 actualChainId);
 
     function run() external returns (UserVaultFactory factory) {
-        if (block.chainid != CELO_SEPOLIA_CHAIN_ID) {
+        if (block.chainid != BSC_TESTNET_CHAIN_ID) {
             revert UnsupportedChain(block.chainid);
         }
 

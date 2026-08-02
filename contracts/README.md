@@ -13,9 +13,10 @@ This repository currently implements the approved contract foundation and per-us
 - One vault per owner and settlement token per deployed factory chain.
 - Mock-first `RouteValidator` for approved adapter/token policy, two-pool route validation, and triangular route validation.
 - Test-only local AMM fixtures for deterministic two-pool and triangular arbitrage scenarios.
+- `PancakeV2Adapter` for BSC Testnet PancakeSwap V2 routes, pinned to the approved router/factory/WBNB addresses.
 - Foundry unit, event, edge-case, and fuzz tests for vault and factory behavior.
 
-Arbitrage execution, real DEX adapters, flash-loan callbacks, profit settlement, grid trading, backend services, and frontend integration are out of scope for this slice.
+Arbitrage execution, flash-loan callbacks, profit settlement, grid trading, backend services, and frontend integration are out of scope for this slice.
 
 ## Dependencies
 
@@ -24,20 +25,23 @@ Arbitrage execution, real DEX adapters, flash-loan callbacks, profit settlement,
 
 ## MVP Testnet
 
-The current target testnet is Celo Sepolia:
+The current target testnet is BSC Testnet:
 
 ```text
-Chain ID: 11142220
-Native currency: CELO
-Block gas limit: 30000000
-Foundry RPC endpoint key: celo_sepolia
-Environment variable: CELO_SEPOLIA_RPC_URL
+Chain ID: 97
+Native currency: tBNB
+Explorer: https://testnet.bscscan.com/
+Foundry RPC endpoint key: bsc_testnet
+Environment variable: BSC_TESTNET_RPC_URL
+Pancake V2 Router: 0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+Pancake V2 Factory: 0x6725F303b657a9451d8BA641348b6761A6CC7a17
+WBNB: 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd
 ```
 
 Example command shape:
 
 ```shell
-CELO_SEPOLIA_RPC_URL=<rpc-url> forge script <script> --rpc-url celo_sepolia
+BSC_TESTNET_RPC_URL=<rpc-url> forge script <script> --rpc-url bsc_testnet
 ```
 
 ## Usage
@@ -60,13 +64,62 @@ forge test
 forge coverage
 ```
 
-### Deploy Factory To Celo Sepolia
+### Deploy Factory To BSC Testnet
 
-Set `CELO_SEPOLIA_RPC_URL` and `PRIVATE_KEY` in your local environment. Never commit a funded private key.
+Set `BSC_TESTNET_RPC_URL` and `PRIVATE_KEY` in your local environment. Never commit a funded private key.
 
 ```shell
 forge script script/DeployUserVaultFactory.s.sol:DeployUserVaultFactory \
-  --rpc-url celo_sepolia \
+  --rpc-url bsc_testnet \
+  --broadcast
+```
+
+### BSC Testnet Pancake Flow
+
+Verify Pancake V2 router metadata:
+
+```shell
+forge script script/bsc-testnet/SmokeTestPancakeConfig.s.sol:SmokeTestPancakeConfig \
+  --rpc-url bsc_testnet
+```
+
+Deploy Sentrix core contracts:
+
+```shell
+forge script script/bsc-testnet/DeploySentrixCore.s.sol:DeploySentrixCore \
+  --rpc-url bsc_testnet \
+  --broadcast
+```
+
+Deploy mock route tokens:
+
+```shell
+forge script script/bsc-testnet/DeployMockTokens.s.sol:DeployMockTokens \
+  --rpc-url bsc_testnet \
+  --broadcast
+```
+
+Create Pancake pools after setting `MOCK_USDC` and `MOCK_WBTC`:
+
+```shell
+forge script script/bsc-testnet/CreatePancakePools.s.sol:CreatePancakePools \
+  --rpc-url bsc_testnet \
+  --broadcast
+```
+
+Seed Pancake pools after the deployer holds enough mock tokens and tBNB. The script wraps missing tBNB into WBNB before adding liquidity.
+
+```shell
+forge script script/bsc-testnet/SeedPancakePools.s.sol:SeedPancakePools \
+  --rpc-url bsc_testnet \
+  --broadcast
+```
+
+Configure route validation after setting `ROUTE_VALIDATOR`, `PANCAKE_V2_ADAPTER`, `MOCK_USDC`, and `MOCK_WBTC`:
+
+```shell
+forge script script/bsc-testnet/ConfigureRouteValidator.s.sol:ConfigureRouteValidator \
+  --rpc-url bsc_testnet \
   --broadcast
 ```
 
