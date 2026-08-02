@@ -12,6 +12,7 @@ This repository currently implements the approved contract foundation and per-us
 - `UserVaultFactory` EIP-1167 clone deployment with OpenZeppelin `Clones`, CREATE2 deterministic deployment, address prediction, and owner/settlement-token vault registry.
 - One vault per owner and settlement token per deployed factory chain.
 - Mock-first `RouteValidator` for approved adapter/token policy, two-pool route validation, and triangular route validation.
+- Test-only local AMM fixtures for deterministic two-pool and triangular arbitrage scenarios.
 - Foundry unit, event, edge-case, and fuzz tests for vault and factory behavior.
 
 Arbitrage execution, real DEX adapters, flash-loan callbacks, profit settlement, grid trading, backend services, and frontend integration are out of scope for this slice.
