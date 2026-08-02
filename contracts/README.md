@@ -11,9 +11,10 @@ This repository currently implements the approved contract foundation and per-us
 - `UserVault` initialization, deposits, idle withdrawals, risk settings, reinvestment setting, flash-loan toggle, strategy authorization, emergency pause controls, OpenZeppelin `SafeERC20`, and `ReentrancyGuard`.
 - `UserVaultFactory` EIP-1167 clone deployment with OpenZeppelin `Clones`, CREATE2 deterministic deployment, address prediction, and owner/settlement-token vault registry.
 - One vault per owner and settlement token per deployed factory chain.
+- Mock-first `RouteValidator` for approved adapter/token policy, two-pool route validation, and triangular route validation.
 - Foundry unit, event, edge-case, and fuzz tests for vault and factory behavior.
 
-Arbitrage execution, DEX adapters, route validation, flash-loan callbacks, profit settlement, grid trading, backend services, and frontend integration are out of scope for this slice.
+Arbitrage execution, real DEX adapters, flash-loan callbacks, profit settlement, grid trading, backend services, and frontend integration are out of scope for this slice.
 
 ## Dependencies
 
