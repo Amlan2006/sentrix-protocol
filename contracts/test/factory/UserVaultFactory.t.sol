@@ -107,6 +107,98 @@ contract UserVaultFactoryTest is Test {
         assertEq(factory.getVault(otherOwner, address(token)), otherVault);
     }
 
+    function test_createVaultDeterministicMatchesPredictedAddress() public {
+        bytes32 salt = keccak256("sentrix-owner-usdc");
+        address predicted = factory.predictVaultAddress(owner, address(token), salt);
+
+        vm.prank(owner);
+        address vault = factory.createVaultDeterministic(address(token), _riskConfig(), salt);
+
+        assertEq(vault, predicted);
+        assertTrue(factory.isVault(vault));
+        assertEq(factory.getVault(owner, address(token)), vault);
+        assertEq(IUserVault(vault).owner(), owner);
+        assertEq(IUserVault(vault).settlementToken(), address(token));
+    }
+
+    function test_createVaultDeterministicEmitsEvent() public {
+        bytes32 salt = keccak256("sentrix-owner-usdc");
+        address predicted = factory.predictVaultAddress(owner, address(token), salt);
+
+        vm.recordLogs();
+
+        vm.prank(owner);
+        address vault = factory.createVaultDeterministic(address(token), _riskConfig(), salt);
+
+        assertEq(vault, predicted);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 4);
+
+        Vm.Log memory createdLog = logs[3];
+        assertEq(createdLog.emitter, address(factory));
+        assertEq(createdLog.topics[0], keccak256("VaultCreated(address,address,address,uint256)"));
+        assertEq(createdLog.topics[1], _topic(owner));
+        assertEq(createdLog.topics[2], _topic(vault));
+        assertEq(createdLog.topics[3], _topic(address(token)));
+        assertEq(abi.decode(createdLog.data, (uint256)), 0);
+    }
+
+    function test_createVaultDeterministicRejectsDuplicateOwnerSettlementToken() public {
+        bytes32 salt = keccak256("sentrix-owner-usdc");
+
+        vm.startPrank(owner);
+        address vault = factory.createVaultDeterministic(address(token), _riskConfig(), salt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IUserVaultFactory.VaultAlreadyExists.selector, owner, address(token), vault)
+        );
+        factory.createVaultDeterministic(address(token), _riskConfig(), keccak256("different-salt"));
+        vm.stopPrank();
+    }
+
+    function test_createVaultRejectsAfterDeterministicVaultExists() public {
+        bytes32 salt = keccak256("sentrix-owner-usdc");
+
+        vm.startPrank(owner);
+        address vault = factory.createVaultDeterministic(address(token), _riskConfig(), salt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IUserVaultFactory.VaultAlreadyExists.selector, owner, address(token), vault)
+        );
+        factory.createVault(address(token), _riskConfig());
+        vm.stopPrank();
+    }
+
+    function test_createVaultDeterministicRejectsAfterStandardVaultExists() public {
+        bytes32 salt = keccak256("sentrix-owner-usdc");
+
+        vm.startPrank(owner);
+        address vault = factory.createVault(address(token), _riskConfig());
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IUserVaultFactory.VaultAlreadyExists.selector, owner, address(token), vault)
+        );
+        factory.createVaultDeterministic(address(token), _riskConfig(), salt);
+        vm.stopPrank();
+    }
+
+    function test_createVaultDeterministicRejectsZeroSettlementToken() public {
+        vm.prank(owner);
+        vm.expectRevert(UserVaultFactory.ZeroAddress.selector);
+        factory.createVaultDeterministic(address(0), _riskConfig(), keccak256("sentrix-owner-usdc"));
+    }
+
+    function test_predictVaultAddressRejectsZeroOwner() public {
+        vm.expectRevert(UserVaultFactory.ZeroAddress.selector);
+        factory.predictVaultAddress(address(0), address(token), keccak256("sentrix-owner-usdc"));
+    }
+
+    function test_predictVaultAddressRejectsZeroSettlementToken() public {
+        vm.expectRevert(UserVaultFactory.ZeroAddress.selector);
+        factory.predictVaultAddress(owner, address(0), keccak256("sentrix-owner-usdc"));
+    }
+
     function _riskConfig() private pure returns (SentrixTypes.UserRiskConfig memory config) {
         config.minNetProfit = 1e6;
         config.maxTradeSize = 10_000e6;

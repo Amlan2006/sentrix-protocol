@@ -26,20 +26,29 @@ contract UserVaultFactory is IUserVaultFactory {
         override
         returns (address vault)
     {
-        if (settlementToken == address(0)) revert ZeroAddress();
-        address existingVault = _ownerSettlementVault[msg.sender][settlementToken];
-        if (existingVault != address(0)) {
-            revert VaultAlreadyExists(msg.sender, settlementToken, existingVault);
-        }
-
+        _validateNewVault(msg.sender, settlementToken);
         vault = vaultImplementation.clone();
-        UserVault(vault).initialize(msg.sender, settlementToken, riskConfig);
+        _registerVault(msg.sender, settlementToken, riskConfig, vault);
+    }
 
-        _ownerVaults[msg.sender].push(vault);
-        _ownerSettlementVault[msg.sender][settlementToken] = vault;
-        isVault[vault] = true;
+    function createVaultDeterministic(
+        address settlementToken,
+        SentrixTypes.UserRiskConfig calldata riskConfig,
+        bytes32 salt
+    ) external override returns (address vault) {
+        _validateNewVault(msg.sender, settlementToken);
+        vault = vaultImplementation.cloneDeterministic(_vaultSalt(msg.sender, settlementToken, salt));
+        _registerVault(msg.sender, settlementToken, riskConfig, vault);
+    }
 
-        emit VaultCreated(msg.sender, vault, settlementToken, _ownerVaults[msg.sender].length - 1);
+    function predictVaultAddress(address owner, address settlementToken, bytes32 salt)
+        external
+        view
+        override
+        returns (address vault)
+    {
+        if (owner == address(0) || settlementToken == address(0)) revert ZeroAddress();
+        return vaultImplementation.predictDeterministicAddress(_vaultSalt(owner, settlementToken, salt), address(this));
     }
 
     function getVaults(address owner) external view override returns (address[] memory) {
@@ -52,5 +61,32 @@ contract UserVaultFactory is IUserVaultFactory {
 
     function vaultCount(address owner) external view override returns (uint256) {
         return _ownerVaults[owner].length;
+    }
+
+    function _registerVault(
+        address owner,
+        address settlementToken,
+        SentrixTypes.UserRiskConfig calldata riskConfig,
+        address vault
+    ) private {
+        _ownerVaults[owner].push(vault);
+        _ownerSettlementVault[owner][settlementToken] = vault;
+        isVault[vault] = true;
+
+        UserVault(vault).initialize(owner, settlementToken, riskConfig);
+
+        emit VaultCreated(owner, vault, settlementToken, _ownerVaults[owner].length - 1);
+    }
+
+    function _validateNewVault(address owner, address settlementToken) private view {
+        if (settlementToken == address(0)) revert ZeroAddress();
+        address existingVault = _ownerSettlementVault[owner][settlementToken];
+        if (existingVault != address(0)) {
+            revert VaultAlreadyExists(owner, settlementToken, existingVault);
+        }
+    }
+
+    function _vaultSalt(address owner, address settlementToken, bytes32 salt) private pure returns (bytes32) {
+        return keccak256(abi.encode(owner, settlementToken, salt));
     }
 }

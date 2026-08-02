@@ -4,7 +4,10 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {SentrixTypes} from "../../src/libraries/SentrixTypes.sol";
 import {UserVault} from "../../src/vault/UserVault.sol";
+import {FalseReturnERC20} from "../mocks/FalseReturnERC20.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
+import {NoReturnERC20} from "../mocks/NoReturnERC20.sol";
+import {ReentrantToken} from "../mocks/ReentrantToken.sol";
 
 contract UserVaultTest is Test {
     event Initialized(address indexed owner, address indexed settlementToken);
@@ -75,6 +78,37 @@ contract UserVaultTest is Test {
         freshVault.initialize(owner, address(0), _riskConfig(false));
     }
 
+    function test_uninitializedVaultRejectsStateChangingCalls() public {
+        UserVault freshVault = new UserVault();
+
+        vm.expectRevert(UserVault.NotInitialized.selector);
+        freshVault.deposit(1);
+
+        vm.expectRevert(UserVault.NotInitialized.selector);
+        freshVault.withdraw(1, recipient);
+
+        vm.expectRevert(UserVault.NotInitialized.selector);
+        freshVault.pauseEmergency();
+    }
+
+    function test_initializeRejectsInvalidMaxSlippageBps() public {
+        UserVault freshVault = new UserVault();
+        SentrixTypes.UserRiskConfig memory config = _riskConfig(false);
+        config.maxSlippageBps = 10_001;
+
+        vm.expectRevert(UserVault.InvalidBasisPoints.selector);
+        freshVault.initialize(owner, address(token), config);
+    }
+
+    function test_initializeRejectsInvalidReinvestmentBps() public {
+        UserVault freshVault = new UserVault();
+        SentrixTypes.UserRiskConfig memory config = _riskConfig(false);
+        config.reinvestmentBps = 10_001;
+
+        vm.expectRevert(UserVault.InvalidBasisPoints.selector);
+        freshVault.initialize(owner, address(token), config);
+    }
+
     function test_depositUpdatesAccounting() public {
         _deposit(owner, 500e6);
 
@@ -82,6 +116,21 @@ contract UserVaultTest is Test {
         assertEq(accounting.principalDeposited, 500e6);
         assertEq(accounting.idleSettlementBalance, 500e6);
         assertEq(token.balanceOf(address(vault)), 500e6);
+    }
+
+    function test_depositRejectsZeroAmount() public {
+        vm.prank(owner);
+        vm.expectRevert(UserVault.InvalidAmount.selector);
+        vault.deposit(0);
+    }
+
+    function test_depositRejectsWhilePaused() public {
+        vm.prank(owner);
+        vault.pauseEmergency();
+
+        vm.prank(owner);
+        vm.expectRevert(UserVault.PausedOperation.selector);
+        vault.deposit(1);
     }
 
     function test_depositEmitsEvent() public {
@@ -143,6 +192,22 @@ contract UserVaultTest is Test {
         vm.prank(other);
         vm.expectRevert(UserVault.Unauthorized.selector);
         vault.withdraw(100e6, recipient);
+    }
+
+    function test_withdrawRejectsZeroAmount() public {
+        _deposit(owner, 500e6);
+
+        vm.prank(owner);
+        vm.expectRevert(UserVault.InvalidAmount.selector);
+        vault.withdraw(0, recipient);
+    }
+
+    function test_withdrawRejectsZeroRecipient() public {
+        _deposit(owner, 500e6);
+
+        vm.prank(owner);
+        vm.expectRevert(UserVault.InvalidRecipient.selector);
+        vault.withdraw(100e6, address(0));
     }
 
     function test_cannotWithdrawMoreThanIdleBalance() public {
@@ -211,6 +276,21 @@ contract UserVaultTest is Test {
         assertTrue(vault.flashLoanArbitrageEnabled());
     }
 
+    function test_setRiskConfigRejectsInvalidBasisPoints() public {
+        SentrixTypes.UserRiskConfig memory config = _riskConfig(false);
+        config.maxSlippageBps = 10_001;
+
+        vm.prank(owner);
+        vm.expectRevert(UserVault.InvalidBasisPoints.selector);
+        vault.setRiskConfig(config);
+    }
+
+    function test_setReinvestmentBpsRejectsInvalidBasisPoints() public {
+        vm.prank(owner);
+        vm.expectRevert(UserVault.InvalidBasisPoints.selector);
+        vault.setReinvestmentBps(10_001);
+    }
+
     function test_onlyOwnerCanAuthorizeAndRevokeStrategy() public {
         vm.prank(other);
         vm.expectRevert(UserVault.Unauthorized.selector);
@@ -227,6 +307,46 @@ contract UserVaultTest is Test {
         vm.prank(owner);
         vault.revokeStrategy(strategy);
         assertFalse(vault.isStrategyAuthorized(strategy));
+    }
+
+    function test_authorizeStrategyRejectsDuplicateStrategy() public {
+        vm.startPrank(owner);
+        vault.authorizeStrategy(strategy);
+
+        vm.expectRevert(UserVault.StrategyAlreadyAuthorized.selector);
+        vault.authorizeStrategy(strategy);
+        vm.stopPrank();
+    }
+
+    function test_revokeStrategyRejectsUnauthorizedStrategy() public {
+        vm.prank(owner);
+        vm.expectRevert(UserVault.StrategyNotAuthorized.selector);
+        vault.revokeStrategy(strategy);
+    }
+
+    function test_authorizeStrategyRejectsZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert(UserVault.ZeroAddress.selector);
+        vault.authorizeStrategy(address(0));
+    }
+
+    function test_revokeStrategyRejectsZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert(UserVault.ZeroAddress.selector);
+        vault.revokeStrategy(address(0));
+    }
+
+    function test_nonOwnerCannotPauseOrUnpause() public {
+        vm.prank(other);
+        vm.expectRevert(UserVault.Unauthorized.selector);
+        vault.pauseEmergency();
+
+        vm.prank(owner);
+        vault.pauseEmergency();
+
+        vm.prank(other);
+        vm.expectRevert(UserVault.Unauthorized.selector);
+        vault.unpauseEmergency();
     }
 
     function test_strategyAuthorizationEmitsEvents() public {
@@ -291,6 +411,56 @@ contract UserVaultTest is Test {
         vm.expectEmit(true, true, true, true, address(vault));
         emit EmergencyWithdrawal(address(vault), owner, recipient, 500e6);
         vault.emergencyWithdrawIdle(recipient);
+    }
+
+    function test_noReturnTokenDepositAndWithdrawSucceeds() public {
+        NoReturnERC20 noReturnToken = new NoReturnERC20();
+        UserVault noReturnVault = new UserVault();
+        noReturnVault.initialize(owner, address(noReturnToken), _riskConfig(false));
+        noReturnToken.mint(owner, 500e6);
+
+        vm.startPrank(owner);
+        noReturnToken.approve(address(noReturnVault), 500e6);
+        noReturnVault.deposit(500e6);
+        noReturnVault.withdraw(200e6, recipient);
+        vm.stopPrank();
+
+        SentrixTypes.VaultAccounting memory accounting = noReturnVault.accounting();
+        assertEq(accounting.idleSettlementBalance, 300e6);
+        assertEq(noReturnToken.balanceOf(address(noReturnVault)), 300e6);
+        assertEq(noReturnToken.balanceOf(recipient), 200e6);
+    }
+
+    function test_falseReturnTokenDepositReverts() public {
+        FalseReturnERC20 falseReturnToken = new FalseReturnERC20();
+        UserVault falseReturnVault = new UserVault();
+        falseReturnVault.initialize(owner, address(falseReturnToken), _riskConfig(false));
+        falseReturnToken.mint(owner, 500e6);
+
+        vm.startPrank(owner);
+        falseReturnToken.approve(address(falseReturnVault), 500e6);
+        vm.expectRevert();
+        falseReturnVault.deposit(500e6);
+        vm.stopPrank();
+    }
+
+    function test_reentrantDepositAttemptIsBlocked() public {
+        ReentrantToken reentrantToken = new ReentrantToken();
+        UserVault reentrantVault = new UserVault();
+        reentrantVault.initialize(owner, address(reentrantToken), _riskConfig(false));
+        reentrantToken.mint(owner, 500e6);
+        reentrantToken.setAttack(reentrantVault, true);
+
+        vm.startPrank(owner);
+        reentrantToken.approve(address(reentrantVault), 500e6);
+        reentrantVault.deposit(500e6);
+        vm.stopPrank();
+
+        SentrixTypes.VaultAccounting memory accounting = reentrantVault.accounting();
+        assertTrue(reentrantToken.reentryBlocked());
+        assertEq(accounting.principalDeposited, 500e6);
+        assertEq(accounting.idleSettlementBalance, 500e6);
+        assertEq(reentrantToken.balanceOf(address(reentrantVault)), 500e6);
     }
 
     function test_idleBalanceNeverExceedsActualTokenBalance() public {

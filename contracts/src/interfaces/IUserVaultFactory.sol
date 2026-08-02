@@ -12,6 +12,17 @@ interface IUserVaultFactory {
         external
         returns (address vault);
 
+    function createVaultDeterministic(
+        address settlementToken,
+        SentrixTypes.UserRiskConfig calldata riskConfig,
+        bytes32 salt
+    ) external returns (address vault);
+
+    function predictVaultAddress(address owner, address settlementToken, bytes32 salt)
+        external
+        view
+        returns (address vault);
+
     function getVaults(address owner) external view returns (address[] memory);
     function getVault(address owner, address settlementToken) external view returns (address);
     function isVault(address vault) external view returns (bool);

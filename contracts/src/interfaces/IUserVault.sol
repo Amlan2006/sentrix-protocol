@@ -16,7 +16,7 @@ interface IUserVault {
     event EmergencyUnpaused(address indexed vault);
     event EmergencyWithdrawal(address indexed vault, address indexed owner, address indexed recipient, uint256 amount);
 
-    function initialize(address owner, address settlementToken, SentrixTypes.UserRiskConfig calldata riskConfig)
+    function initialize(address owner_, address settlementToken_, SentrixTypes.UserRiskConfig calldata riskConfig_)
         external;
 
     function deposit(uint256 amount) external;
