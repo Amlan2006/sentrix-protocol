@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {SentrixTypes} from "../../src/libraries/SentrixTypes.sol";
 import {IUserVault} from "../../src/interfaces/IUserVault.sol";
 import {IUserVaultFactory} from "../../src/interfaces/IUserVaultFactory.sol";
@@ -9,6 +10,8 @@ import {UserVaultFactory} from "../../src/factory/UserVaultFactory.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 
 contract UserVaultFactoryTest is Test {
+    event VaultCreated(address indexed owner, address indexed vault, address indexed settlementToken, uint256 index);
+
     address private owner = address(0xA11CE);
     address private otherOwner = address(0xB0B);
 
@@ -39,6 +42,24 @@ contract UserVaultFactoryTest is Test {
         assertEq(IUserVault(vault).owner(), owner);
         assertEq(IUserVault(vault).settlementToken(), address(token));
         assertFalse(IUserVault(vault).flashLoanArbitrageEnabled());
+    }
+
+    function test_createVaultEmitsEvent() public {
+        vm.recordLogs();
+
+        vm.prank(owner);
+        address vault = factory.createVault(address(token), _riskConfig());
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 4);
+
+        Vm.Log memory createdLog = logs[3];
+        assertEq(createdLog.emitter, address(factory));
+        assertEq(createdLog.topics[0], keccak256("VaultCreated(address,address,address,uint256)"));
+        assertEq(createdLog.topics[1], _topic(owner));
+        assertEq(createdLog.topics[2], _topic(vault));
+        assertEq(createdLog.topics[3], _topic(address(token)));
+        assertEq(abi.decode(createdLog.data, (uint256)), 0);
     }
 
     function test_createVaultRejectsZeroSettlementToken() public {
@@ -95,5 +116,9 @@ contract UserVaultFactoryTest is Test {
         config.arbitrageEnabled = true;
         config.flashLoanArbitrageEnabled = true;
         config.gridEnabled = false;
+    }
+
+    function _topic(address value) private pure returns (bytes32) {
+        return bytes32(uint256(uint160(value)));
     }
 }
