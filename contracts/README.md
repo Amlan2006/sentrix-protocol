@@ -126,6 +126,15 @@ forge script script/bsc-testnet/ConfigureRouteValidator.s.sol:ConfigureRouteVali
   --broadcast
 ```
 
+Smoke test user-funded triangular arbitrage after setting `USER_VAULT_FACTORY`, `ROUTE_VALIDATOR`, `PANCAKE_V2_ADAPTER`, `ARBITRAGE_EXECUTOR`, `MOCK_USDC`, and `MOCK_WBTC`:
+
+```shell
+forge script script/bsc-testnet/SmokeTestUserFundedArbitrage.s.sol:SmokeTestUserFundedArbitrage \
+  --rpc-url bsc_testnet
+```
+
+Add `--broadcast` only after the dry run succeeds.
+
 ### Format
 
 ```shell

@@ -75,3 +75,41 @@ MOCK_WBTC=
 ```shell
 forge script script/bsc-testnet/ConfigureRouteValidator.s.sol:ConfigureRouteValidator --rpc-url bsc_testnet --broadcast
 ```
+
+## Smoke Test User-Funded Arbitrage
+
+```text
+USER_VAULT_FACTORY=
+ROUTE_VALIDATOR=
+PANCAKE_V2_ADAPTER=
+ARBITRAGE_EXECUTOR=
+MOCK_USDC=
+MOCK_WBTC=
+```
+
+Optional raw-unit overrides:
+
+```text
+SMOKE_DEPOSIT_AMOUNT=1000000000
+SMOKE_BORROW_AMOUNT=100000000
+SMOKE_MIN_GROSS_PROFIT=1
+SMOKE_DEADLINE_SECONDS=1800
+```
+
+This script creates or reuses the deployer's USDC vault, authorizes `ArbitrageExecutor`, deposits mock USDC if needed, then executes:
+
+```text
+MOCK_USDC -> WBNB -> MOCK_WBTC -> MOCK_USDC
+```
+
+Run a dry run first:
+
+```shell
+forge script script/bsc-testnet/SmokeTestUserFundedArbitrage.s.sol:SmokeTestUserFundedArbitrage --rpc-url bsc_testnet
+```
+
+Broadcast only after the dry run succeeds:
+
+```shell
+forge script script/bsc-testnet/SmokeTestUserFundedArbitrage.s.sol:SmokeTestUserFundedArbitrage --rpc-url bsc_testnet --broadcast
+```
