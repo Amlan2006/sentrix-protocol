@@ -1,4 +1,4 @@
-# EVM Arbitrage and Automated Investment Platform — Development Plan
+# Sentrix Protocol Arbitrage and Grid Trading — Development Plan
 
 ## 1. Project Overview
 
@@ -18,6 +18,8 @@ The system will:
 10. Allow users to withdraw idle funds and exit active strategies.
 
 The MVP is limited to one EVM chain. Cross-chain arbitrage, bridge integrations, and cross-chain accounting are explicitly excluded.
+
+Sentrix Protocol is now scoped to arbitrage execution and grid trading. A strategy marketplace is not part of the product roadmap and must not be implemented unless the project owner re-approves it as a separate future product.
 
 ---
 
@@ -145,6 +147,9 @@ event FlashLoanArbitrageSettingUpdated(
 - Automatic upgrading without timelock.
 - Governance token.
 - DAO governance.
+- Strategy marketplace.
+- Third-party strategy listings.
+- Third-party executable strategy modules.
 
 ---
 
@@ -271,7 +276,7 @@ project-root/
 
 # Smart-Contract-First Development Rule
 
-The smart-contract core must be completed before full backend, frontend, strategy marketplace, or smart-account development begins.
+The smart-contract core must be completed before full backend, frontend, or smart-account development begins.
 
 A minimal off-chain simulator may be developed alongside the contracts only for:
 
@@ -342,7 +347,6 @@ Until this gate is passed:
 
 - Production backend development must not begin.
 - Full frontend integration must not begin.
-- The governed strategy marketplace must not begin.
 - Smart-account and session-key integration must not begin.
 - Mainnet deployment preparation must not begin.
 
@@ -2116,209 +2120,6 @@ Phase 17 is finished only when:
 
 ---
 
-# Phase 18 — Governed Strategy Marketplace
-
-> **Prerequisite:** The Smart-Contract Core Completion Gate, security hardening, and base-strategy audit requirements must be satisfied.
-
-## Objective
-
-Create a non-custodial marketplace where approved strategy developers can publish strategy modules or configuration templates that users may voluntarily activate for their own vaults.
-
-The marketplace must never allow a third-party developer to custody user funds or execute unrestricted calls from a user vault.
-
-## Marketplace Model
-
-A strategy listing may represent either:
-
-1. A configuration-only strategy template using existing audited modules.
-2. A new strategy module that has passed governance review, technical validation, and security review.
-
-Configuration-only templates should be preferred because they introduce less smart-contract risk.
-
-## Strategy Listing Data
-
-Track:
-
-```solidity
-struct StrategyListing {
-    bytes32 strategyId;
-    address implementation;
-    address developer;
-    bytes32 codeHash;
-    uint32 version;
-    uint16 developerFeeBps;
-    StrategyRiskLevel riskLevel;
-    bool configurationOnly;
-    bool approved;
-    bool paused;
-}
-```
-
-Off-chain metadata may include:
-
-- Strategy name and description.
-- Supported assets and DEXs.
-- Required vault permissions.
-- Historical performance.
-- Maximum drawdown.
-- Win rate.
-- Average net profit.
-- Gas consumption.
-- Failure rate.
-- Audit reports.
-- Source-code repository and commit hash.
-- Known risks and assumptions.
-
-Historical performance must be clearly labeled as simulated, backtested, testnet, or live. It must not be presented as guaranteed future performance.
-
-## Security and Governance Requirements
-
-### Module approval
-
-A module may be listed only after:
-
-- Source code is published.
-- Bytecode matches the reviewed source.
-- Contract interfaces are compatible.
-- Static analysis passes.
-- Unit, fork, fuzz, and invariant tests pass.
-- Required external audit or independent review is completed.
-- Governance approves the exact implementation address and code hash.
-- A timelock expires before activation.
-
-### Execution sandbox
-
-Marketplace strategies must not be able to:
-
-- Withdraw user assets to arbitrary recipients.
-- Change vault ownership.
-- Approve arbitrary spenders.
-- Call unapproved contracts.
-- Upgrade the vault.
-- Disable user withdrawals.
-- bypass token, adapter, oracle, slippage, gas, loss, or exposure limits.
-
-The vault must execute marketplace strategies through a restricted strategy interface and validate all resulting state changes.
-
-### User consent
-
-The user must explicitly select:
-
-- Strategy version.
-- Capital allocation.
-- Maximum trade size.
-- Maximum loss.
-- Maximum gas reimbursement.
-- Allowed assets.
-- Whether flash loans are allowed.
-- Developer fee.
-- Expiration or review date.
-
-Strategies must be disabled by default.
-
-### Versioning
-
-- Every module version receives a unique strategy ID or version identifier.
-- Existing users are not migrated automatically.
-- Users must explicitly approve a new version.
-- Deprecated or vulnerable versions can be paused from new executions.
-- A pause must not prevent users from withdrawing or exiting positions.
-
-### Developer compensation
-
-Possible fee model:
-
-```text
-Gross strategy profit
-- flash-loan fee
-- gas reimbursement
-- protocol fee
-- executor fee
-- developer performance fee
-= user net realized profit
-```
-
-Developer fees must:
-
-- Be disclosed before activation.
-- Be capped by governance.
-- Apply only to realized positive profit.
-- Never be charged on principal or unrealized gains.
-- Be included in minimum-net-profit validation.
-
-## Reputation and Analytics
-
-Display verified metrics such as:
-
-- Total executions.
-- Successful executions.
-- Failure rate.
-- Realized net profit.
-- Maximum drawdown.
-- Average gas cost.
-- Profit after all fees.
-- Number of active vaults.
-- Strategy age.
-- Current audited version.
-
-Metrics must be derived from indexed on-chain events wherever possible.
-
-## Emergency Controls
-
-Support:
-
-- Pause a strategy version.
-- Disable new allocations.
-- Allow position closure.
-- Revoke module authorization.
-- Notify affected vault owners.
-- Preserve owner withdrawals.
-- Provide migration instructions for replacement versions.
-
-## Testing Requirements
-
-- Listing creation and approval tests.
-- Unapproved module rejection.
-- Code-hash mismatch rejection.
-- Unauthorized developer update tests.
-- User activation and deactivation tests.
-- Allocation-cap tests.
-- Developer-fee tests.
-- Fee-on-loss rejection tests.
-- Version-upgrade consent tests.
-- Paused-strategy exit tests.
-- Malicious module tests.
-- Arbitrary-call attempt tests.
-- Arbitrary-approval attempt tests.
-- Withdrawal-blocking attempt tests.
-- Cross-vault isolation tests.
-- Marketplace analytics reconciliation tests.
-- Invariant: a listed strategy cannot obtain more authority than the user explicitly granted.
-
-## Phase Completion Requirements
-
-Phase 18 is finished only when:
-
-- [ ] Configuration-only templates and executable modules are clearly separated.
-- [ ] No strategy can be listed without governance approval.
-- [ ] Approved source, bytecode, implementation address, and code hash are linked.
-- [ ] Every executable strategy version has completed the required security review.
-- [ ] Users explicitly activate strategies and define capital and risk limits.
-- [ ] Strategies are disabled by default.
-- [ ] Flash-loan permission remains separately controlled by each user.
-- [ ] Developer fees are disclosed, capped, and charged only on realized positive profit.
-- [ ] A module cannot withdraw, approve, upgrade, or call arbitrary addresses.
-- [ ] A vulnerable strategy can be paused without blocking user withdrawals or exits.
-- [ ] Existing users are never automatically migrated to a new strategy version.
-- [ ] Performance labels distinguish backtested, simulated, testnet, and live results.
-- [ ] Marketplace metrics reconcile with on-chain events.
-- [ ] Malicious-module and permission-escape tests pass.
-- [ ] No unresolved critical or high-severity issue remains.
-- [ ] A separate external audit is completed before third-party executable modules are publicly enabled.
-
----
-
-
 # Phase 19 — Smart-Account Experience and Session-Key Automation
 
 > **Prerequisite:** The Smart-Contract Core Completion Gate must be satisfied and vault permissions must be stable.
@@ -2890,7 +2691,7 @@ Withdrawals:
 
 ```text
 Mandatory order:
-Smart-contract core must pass its completion gate before production backend, frontend, marketplace, or smart-account implementation.
+Smart-contract core must pass its completion gate before production backend, frontend, or smart-account implementation.
 
 Phase 0   Product definition and threat model
 Phase 1   Repository, interfaces, and CI
@@ -2910,7 +2711,6 @@ Phase 14  Testnet beta
 Phase 15  Mainnet limited beta
 Phase 16  Production release
 Phase 17  Additional same-chain arbitrage strategies
-Phase 18  Governed strategy marketplace
 Phase 19  Smart-account experience and session-key automation
 Phase 20  Other post-MVP extensions
 ```

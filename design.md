@@ -208,7 +208,6 @@ Primary navigation:
 - Vault
 - Arbitrage
 - Grid Strategies
-- Marketplace
 - Portfolio
 - Activity
 - Settings
@@ -264,8 +263,7 @@ Sections:
 4. Automated reinvestment
 5. Grid strategies
 6. Smart accounts
-7. Strategy marketplace
-8. Security model
+7. Security model
 
 ## 8. Overview Dashboard
 
@@ -436,54 +434,7 @@ Visualization:
 
 Use glow only for active or recently filled levels.
 
-## 12. Strategy Marketplace
-
-The marketplace lists protocol-approved strategies.
-
-Each strategy card shows:
-
-- Strategy name
-- Developer
-- Risk score
-- Supported assets
-- Historical return
-- Maximum drawdown
-- Strategy fee
-- Audit status
-- Active users
-- Version
-
-Example:
-
-```text
-Stable Triangle
-
-Conservative stablecoin arbitrage
-
-30D Return        +3.8%
-Max Drawdown      -0.4%
-Risk              Low
-Developer Fee     5% of profit
-Audit             Verified
-```
-
-Strategy detail pages include:
-
-- Description
-- Requested permissions
-- Contract address
-- Code hash
-- Audit report
-- Backtest
-- Live performance
-- Fees
-- Risk assumptions
-- Version history
-- Allocation controls
-
-Activation must show a human-readable permission summary before confirmation.
-
-## 13. Smart Account Page
+## 12. Smart Account Page
 
 Display:
 
@@ -514,7 +465,7 @@ Always display:
 This session key cannot withdraw funds or change ownership.
 ```
 
-## 14. Activity Page
+## 13. Activity Page
 
 Every execution should have a transparent receipt.
 
@@ -907,7 +858,6 @@ src/
 │   ├── vault/
 │   ├── arbitrage/
 │   ├── grid/
-│   ├── marketplace/
 │   ├── portfolio/
 │   ├── activity/
 │   └── settings/
@@ -921,7 +871,6 @@ src/
 │   ├── vault/
 │   ├── arbitrage/
 │   ├── grid/
-│   ├── marketplace/
 │   ├── smart-account/
 │   ├── charts/
 │   └── ui/

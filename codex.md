@@ -12,7 +12,7 @@ They are intended to keep the codebase secure, maintainable, testable, and align
 - Do not add speculative features for future phases.
 - Follow the YAGNI principle: build only what is currently required.
 - Do not introduce abstractions, modules, services, contracts, routes, or database entities without an immediate use.
-- Do not begin backend, frontend, marketplace, or smart-account work before the relevant smart-contract phase is complete.
+- Do not begin backend, frontend, or smart-account work before the relevant smart-contract phase is complete.
 - Do not expand the scope to cross-chain functionality unless it is approved as a separate phase.
 
 ---
@@ -237,7 +237,6 @@ Examples:
 - Profit settlements
 - Grid strategies
 - Positions
-- Strategy marketplace records
 - Session-key metadata
 - Chain sync state
 
@@ -349,7 +348,6 @@ POST   /create_grid_strategy
 PATCH  /update_grid_strategy
 POST   /pause_grid_strategy
 POST   /exit_grid_strategy
-GET    /get_strategy_marketplace_entries
 ```
 
 Route names must clearly communicate the operation.
