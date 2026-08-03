@@ -15,6 +15,15 @@ interface IUserVault {
     event EmergencyPaused(address indexed vault);
     event EmergencyUnpaused(address indexed vault);
     event EmergencyWithdrawal(address indexed vault, address indexed owner, address indexed recipient, uint256 amount);
+    event UserFundedArbitrageStarted(address indexed vault, address indexed strategy, uint256 amount);
+    event UserFundedArbitrageSettled(
+        address indexed vault,
+        address indexed strategy,
+        uint256 principalAmount,
+        uint256 grossProfit,
+        uint256 withdrawableProfit,
+        uint256 reinvestmentAmount
+    );
 
     function initialize(address owner_, address settlementToken_, SentrixTypes.UserRiskConfig calldata riskConfig_)
         external;
@@ -29,6 +38,8 @@ interface IUserVault {
     function revokeStrategy(address strategy) external;
     function pauseEmergency() external;
     function unpauseEmergency() external;
+    function startUserFundedArbitrage(uint256 amount, address recipient) external returns (uint256);
+    function finishUserFundedArbitrage(uint256 principalAmount, uint256 grossProfit) external;
 
     function owner() external view returns (address);
     function settlementToken() external view returns (address);

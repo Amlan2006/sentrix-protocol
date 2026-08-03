@@ -14,9 +14,10 @@ This repository currently implements the approved contract foundation and per-us
 - Mock-first `RouteValidator` for approved adapter/token policy, two-pool route validation, and triangular route validation.
 - Test-only local AMM fixtures for deterministic two-pool and triangular arbitrage scenarios.
 - `PancakeV2Adapter` for BSC Testnet PancakeSwap V2 routes, pinned to the approved router/factory/WBNB addresses.
+- `ArbitrageExecutor` for user-funded two-pool and triangular arbitrage through approved adapters.
 - Foundry unit, event, edge-case, and fuzz tests for vault and factory behavior.
 
-Arbitrage execution, flash-loan callbacks, profit settlement, grid trading, backend services, and frontend integration are out of scope for this slice.
+Flash-loan callbacks, fee settlement, grid trading, backend services, and frontend integration are out of scope for this slice.
 
 ## Dependencies
 
@@ -90,6 +91,8 @@ forge script script/bsc-testnet/DeploySentrixCore.s.sol:DeploySentrixCore \
   --rpc-url bsc_testnet \
   --broadcast
 ```
+
+Each vault owner must authorize the deployed `ArbitrageExecutor` with `UserVault.authorizeStrategy(arbitrageExecutor)` before user-funded arbitrage can execute from that vault.
 
 Deploy mock route tokens:
 

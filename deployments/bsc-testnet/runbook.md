@@ -19,7 +19,9 @@ forge script script/bsc-testnet/SmokeTestPancakeConfig.s.sol:SmokeTestPancakeCon
 forge script script/bsc-testnet/DeploySentrixCore.s.sol:DeploySentrixCore --rpc-url bsc_testnet --broadcast
 ```
 
-Record the deployed `UserVaultFactory`, `RouteValidator`, and `PancakeV2Adapter` addresses in `deployments/bsc-testnet/addresses.json`.
+Record the deployed `UserVaultFactory`, `RouteValidator`, `PancakeV2Adapter`, and `ArbitrageExecutor` addresses in `deployments/bsc-testnet/addresses.json`.
+
+Each user vault owner must authorize the deployed `ArbitrageExecutor` before user-funded arbitrage can move vault idle capital.
 
 ## Deploy Mock Tokens
 

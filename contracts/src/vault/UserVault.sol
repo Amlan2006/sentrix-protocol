@@ -21,6 +21,7 @@ contract UserVault is IUserVault, ReentrancyGuard {
     error StrategyAlreadyAuthorized();
     error StrategyNotAuthorized();
     error PausedOperation();
+    error InsufficientSettlementReturned(uint256 requiredBalance, uint256 actualBalance);
 
     address public override owner;
     address public override settlementToken;
@@ -39,6 +40,11 @@ contract UserVault is IUserVault, ReentrancyGuard {
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert Unauthorized();
+        _;
+    }
+
+    modifier onlyAuthorizedStrategy() {
+        if (!_authorizedStrategies[msg.sender]) revert Unauthorized();
         _;
     }
 
@@ -147,6 +153,55 @@ contract UserVault is IUserVault, ReentrancyGuard {
     function unpauseEmergency() external override onlyInitialized onlyOwner {
         emergencyPaused = false;
         emit EmergencyUnpaused(address(this));
+    }
+
+    function startUserFundedArbitrage(uint256 amount, address recipient)
+        external
+        override
+        onlyInitialized
+        onlyAuthorizedStrategy
+        whenAutomationNotPaused
+        nonReentrant
+        returns (uint256)
+    {
+        if (recipient == address(0)) revert InvalidRecipient();
+        if (amount == 0) revert InvalidAmount();
+        if (amount > _accounting.idleSettlementBalance) revert InsufficientIdleBalance();
+
+        _accounting.idleSettlementBalance -= amount;
+        IERC20(settlementToken).safeTransfer(recipient, amount);
+
+        emit UserFundedArbitrageStarted(address(this), msg.sender, amount);
+        return amount;
+    }
+
+    function finishUserFundedArbitrage(uint256 principalAmount, uint256 grossProfit)
+        external
+        override
+        onlyInitialized
+        onlyAuthorizedStrategy
+        nonReentrant
+    {
+        if (principalAmount == 0) revert InvalidAmount();
+
+        uint256 reinvestmentAmount = (grossProfit * _riskConfig.reinvestmentBps) / 10_000;
+        uint256 withdrawableProfit = grossProfit - reinvestmentAmount;
+        uint256 requiredBalance =
+            _accounting.idleSettlementBalance + _accounting.reinvestmentCapital + principalAmount + grossProfit;
+        uint256 actualBalance = IERC20(settlementToken).balanceOf(address(this));
+        if (actualBalance < requiredBalance) {
+            revert InsufficientSettlementReturned(requiredBalance, actualBalance);
+        }
+
+        _accounting.idleSettlementBalance += principalAmount + withdrawableProfit;
+        _accounting.grossArbitrageProfit += grossProfit;
+        _accounting.netArbitrageProfit += grossProfit;
+        _accounting.withdrawableProfit += withdrawableProfit;
+        _accounting.reinvestmentCapital += reinvestmentAmount;
+
+        emit UserFundedArbitrageSettled(
+            address(this), msg.sender, principalAmount, grossProfit, withdrawableProfit, reinvestmentAmount
+        );
     }
 
     function isStrategyAuthorized(address strategy) external view override returns (bool) {

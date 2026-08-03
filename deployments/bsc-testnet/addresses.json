@@ -9,7 +9,8 @@
   "sentrix": {
     "userVaultFactory": "",
     "routeValidator": "",
-    "pancakeV2Adapter": ""
+    "pancakeV2Adapter": "",
+    "arbitrageExecutor": ""
   },
   "tokens": {
     "mockUsdc": "",
